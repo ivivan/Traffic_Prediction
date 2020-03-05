@@ -3,7 +3,9 @@
 
  ***
 
- ![Traffic Prediction Problem](Problem.png "Traffic Prediction Problem")
+![Traffic Prediction Problem](Problem.png "Traffic Prediction Problem")
+
+![Traffic Flow](Traffic_Flow.png "Traffic Flow")
 
  用已知口的{t1,..., ，tn}预测未知口的{t1,..., ，tn}
 
@@ -22,6 +24,9 @@ Encoder-Decoder 架构, 初步设计
 
     * LSTM 多步预测
     * Attention 提供解释性
+
+从这个模式开始改进
+![Basic Idea](basic_idea.png "Basic Idea")
 
 ***
 
