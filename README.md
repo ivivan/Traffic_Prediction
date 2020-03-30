@@ -24,9 +24,14 @@ Encoder-Decoder 架构, 初步设计
 
     * LSTM 多步预测
     * Attention 提供解释性
+    * Multi-task 
 
 从这个模式开始改进
-![Basic Idea](basic_idea.png "Basic Idea")
+![Basic Idea](basic_idea_v2.png "Basic Idea")
+
+***
+
+- [ ] 图权重定义
 
 ***
 
