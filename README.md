@@ -39,7 +39,7 @@ Encoder-Decoder 架构, 初步设计
 
 
 - [ ] [Graph2Seq](https://github.com/nwpuhq/Graph2Seq) 这个本科毕设值得看一看，简单紧凑。只用Graph NN做Encoder不适合我们这个问题，但是扩展很容易。 
-
+- [ ] [Graph_Benchmark](https://github.com/graphdeeplearning/benchmarking-gnns) Graph 性能基准测试，2020年最新文章及代码。
 
 
 
