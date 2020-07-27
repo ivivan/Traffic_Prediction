@@ -12,7 +12,7 @@ import pandas as pd
 from models.GlobalAttention import Global_Attention, Encoder, Decoder, Seq2Seq
 
 from utils.early_stopping import EarlyStopping
-from utils.prepare_WL import test_pm25_single_station
+from utils.prepare_Traffic import test_traffic_single_direction
 from utils.support import *
 from utils.adamw import AdamW
 from utils.cyclic_scheduler import CyclicLRWithRestarts
@@ -47,11 +47,11 @@ def train(model, optimizer, criterion, X_train, y_train):
         x_train_batch = np.take(X_train, batch_idx, axis=0)
         y_train_batch = np.take(y_train, batch_idx, axis=0)
 
-        loss = train_iteration(model, optimizer, criterion, CLIP, WD,
+        loss = train_iteration(model, optimizer, criterion, CLIP,
                                x_train_batch, y_train_batch)
 
-        # if t_i % 50 == 0:
-        #     print('batch_loss:{}'.format(loss))
+        if t_i % 50 == 0:
+            print('batch_loss:{}'.format(loss))
 
         iter_losses[t_i // BATCH_SIZE] = loss
 
@@ -60,7 +60,7 @@ def train(model, optimizer, criterion, X_train, y_train):
     return np.mean(iter_losses[range(0, iter_per_epoch)])
 
 
-def train_iteration(model, optimizer, criterion, clip, wd, X_train, y_train):
+def train_iteration(model, optimizer, criterion, clip, X_train, y_train):
     model.train()
     optimizer.zero_grad()
 
@@ -164,7 +164,7 @@ def evaluate_iteration(model, criterion, x_test, y_test, scaler_x, scaler_y):
 if __name__ == "__main__":
 
     # model hyperparameters
-    INPUT_DIM = 1
+    INPUT_DIM = 52
     OUTPUT_DIM = 1
     ENC_HID_DIM = 25
     DEC_HID_DIM = 25
@@ -175,13 +175,13 @@ if __name__ == "__main__":
     LR = 0.001  # learning rate
     CLIP = 1
     EPOCHS = 500
-    BATCH_SIZE = 100
+    BATCH_SIZE = 20
 
     ## Different test data
 
     (X_train, y_train, x_train_len,
      x_train_before_len), (X_test, y_test, x_test_len, x_test_before_len), (
-         scaler_x, scaler_y) = test_pm25_single_station()
+         scaler_x, scaler_y) = test_traffic_single_direction()
 
     print('\nsize of x_train, y_train, x_test, y_test:')
     print(X_train.shape, y_train.shape, X_test.shape, y_test.shape)
@@ -203,7 +203,7 @@ if __name__ == "__main__":
     optimizer = AdamW(model.parameters(), lr=1e-2, weight_decay=1e-5)
     scheduler = CyclicLRWithRestarts(optimizer,
                                      BATCH_SIZE,
-                                     68673,
+                                     17062,
                                      restart_period=5,
                                      t_mult=1.2,
                                      policy="cosine")
@@ -214,57 +214,61 @@ if __name__ == "__main__":
     # initialize the early_stopping object
     # early stopping patience; how long to wait after last time validation loss improved.
     patience = 10
-    early_stopping = EarlyStopping(patience=patience, verbose=True)
+    early_stopping = EarlyStopping(output_path='Decoder/checkpoints/Traffic_N0_3.pt',
+                                   patience=patience,
+                                   verbose=True)
+
+
 
     # Training
 
-    # best_valid_loss = float('inf')
-    # for epoch in range(EPOCHS):
+    best_valid_loss = float('inf')
+    for epoch in range(EPOCHS):
 
-    #     train_epoch_losses = np.zeros(EPOCHS)
-    #     evaluate_epoch_losses = np.zeros(EPOCHS)
+        train_epoch_losses = np.zeros(EPOCHS)
+        evaluate_epoch_losses = np.zeros(EPOCHS)
 
-    #     print('Epoch:', epoch)
+        print('Epoch:', epoch)
 
-    #     scheduler.step()
+        scheduler.step()
 
-    #     start_time = time.time()
-    #     train_loss = train(model, optimizer, criterion, X_train, y_train)
-    #     valid_loss, _, _, _ = evaluate(model, criterion, X_test, y_test,
-    #                                    scaler_x, scaler_y)
-    #     end_time = time.time()
+        start_time = time.time()
+        train_loss = train(model, optimizer, criterion, X_train, y_train)
+        valid_loss, _, _, _ = evaluate(model, criterion, X_test, y_test,
+                                       scaler_x, scaler_y)
+        end_time = time.time()
 
-    #     train_epoch_losses[epoch] = train_loss
-    #     evaluate_epoch_losses[epoch] = valid_loss
+        train_epoch_losses[epoch] = train_loss
+        evaluate_epoch_losses[epoch] = valid_loss
 
-    #     epoch_mins, epoch_secs = epoch_time(start_time, end_time)
+        epoch_mins, epoch_secs = epoch_time(start_time, end_time)
 
-    #     # early_stopping needs the validation loss to check if it has decresed,
-    #     # and if it has, it will make a checkpoint of the current model
-    #     early_stopping(valid_loss, model)
+        # early_stopping needs the validation loss to check if it has decresed,
+        # and if it has, it will make a checkpoint of the current model
+        early_stopping(valid_loss, model)
 
-    #     if early_stopping.early_stop:
-    #         print("Early stopping")
-    #         break
+        if early_stopping.early_stop:
+            print("Early stopping")
+            break
 
-    #     print(f'Epoch: {epoch + 1:02} | Time: {epoch_mins}m {epoch_secs}s')
-    #     print(
-    #         f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}'
-    #     )
-    #     print(
-    #         f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}'
-    #     )
+        print(f'Epoch: {epoch + 1:02} | Time: {epoch_mins}m {epoch_secs}s')
+        print(
+            f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}'
+        )
+        print(
+            f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}'
+        )
 
     # prediction
 
     
-    model.load_state_dict(torch.load('checkpoints/checkpoint.pt',map_location='cpu'))
+    # model.load_state_dict(torch.load('checkpoints/checkpoint.pt',map_location='cpu'))
     
-    test_loss, test_mae, test_rmsle, test_rmse = evaluate(model, criterion, X_test, y_test, scaler_x, scaler_y)
+    # test_loss, test_mae, test_rmsle, test_rmse = evaluate(model, criterion, X_test, y_test, scaler_x, scaler_y)
     
-    # plt.show()
+    # # plt.show()
     
-    print(f'| Test Loss: {test_loss:.4f} | Test PPL: {math.exp(test_loss):7.4f} |')
-    print(f'| MAE: {test_mae:.4f} | Test PPL: {math.exp(test_mae):7.4f} |')
-    print(f'| RMSLE: {test_rmsle:.4f} | Test PPL: {math.exp(test_rmsle):7.4f} |')
-    print(f'| RMSE: {test_rmse:.4f} | Test PPL: {math.exp(test_rmse):7.4f} |')
+    # print(f'| Test Loss: {test_loss:.4f} | Test PPL: {math.exp(test_loss):7.4f} |')
+    # print(f'| MAE: {test_mae:.4f} | Test PPL: {math.exp(test_mae):7.4f} |')
+    # print(f'| RMSLE: {test_rmsle:.4f} | Test PPL: {math.exp(test_rmsle):7.4f} |')
+    # print(f'| RMSE: {test_rmse:.4f} | Test PPL: {math.exp(test_rmse):7.4f} |')

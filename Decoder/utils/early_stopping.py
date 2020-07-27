@@ -3,7 +3,7 @@ import torch
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, patience=7, verbose=False):
+    def __init__(self, output_path, patience=7, verbose=False):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
@@ -13,6 +13,7 @@ class EarlyStopping:
         """
         self.patience = patience
         self.verbose = verbose
+        self.output_path = output_path
         self.counter = 0
         self.best_score = None
         self.early_stop = False
@@ -39,6 +40,5 @@ class EarlyStopping:
         '''Saves model when validation loss decrease.'''
         if self.verbose:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        # torch.save(model.state_dict(), '../Bias_Attention/checkpoints/checkpoint.pt')
-        torch.save(model.state_dict(), r'C:\Users\ZHA244\Coding\Pytorch_based\Bias_Attention\checkpoints\checkpoint.pt')
+        torch.save(model.state_dict(), self.output_path)
         self.val_loss_min = val_loss
